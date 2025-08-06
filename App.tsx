@@ -13,10 +13,15 @@ import * as analyticsService from './services/analyticsService';
 import * as userService from './services/userService';
 import type { View, ChatMessage, GeneratedContent, ExerciseContent, UserData, User } from './types';
 import { LoadingSpinner } from './components/LoadingSpinner';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './firebaseConfig';
+
 
 export default function App(): React.ReactNode {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => userService.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
+
+  const [authLoading, setAuthLoading] = useState(true);
 
   const [activeView, setActiveView] = useState<View>('exercises');
   const [history, setHistory] = useState<ChatMessage[]>([]);
@@ -31,13 +36,22 @@ export default function App(): React.ReactNode {
   const timeTrackerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (currentUser) {
-      const data = userService.getUserData(currentUser.username);
-      setUserData(data);
-    } else {
-      setUserData(null);
-    }
-  }, [currentUser]);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const data = await userService.getUserData(firebaseUser.uid);
+        if (data) {
+          setCurrentUser(data.profile);
+          setUserData(data);
+        }
+      } else {
+        setCurrentUser(null);
+        setUserData(null);
+      }
+      setAuthLoading(false); // Dejamos de cargar
+    });
+    return () => unsubscribe(); // Limpiamos al salir
+  }, []);
+  
 
   const updateUserData = (newUserData: UserData) => {
     if (currentUser) {
@@ -85,6 +99,7 @@ export default function App(): React.ReactNode {
       setCurrentUser(newUserData.profile);
     }
   };
+  
 
   const handleTopicSubmit = useCallback(async (topic: string) => {
     setIsLoading(true);
@@ -183,7 +198,7 @@ export default function App(): React.ReactNode {
   };
   
   if (!currentUser || !userData) {
-    return <LoginView onLogin={handleLogin} />;
+ return <LoginView onLogin={handleLogin} /> as React.ReactElement;
   }
 
   const renderView = () => {

@@ -1,48 +1,45 @@
+// En components/LoginView.tsx
+
 import React, { useState } from 'react';
 import * as userService from '../services/userService';
 import type { User } from '../types';
 import { GoogleIcon } from './icons/GoogleIcon';
 
 interface LoginViewProps {
-  onLogin: (user: User) => void;
+  // onLogin ya no es necesario porque App.tsx escucha los cambios de Firebase directamente.
+  // Lo dejamos por si se necesita para otras cosas, pero podría removerse.
+  onLogin: (user: User) => void; 
 }
 
 export default function LoginView({ onLogin }: LoginViewProps) {
   const [isLoginView, setIsLoginView] = useState(true);
-  const [email, setEmail] = useState(''); // Cambia username por email
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Reemplaza tu función handleSubmit
-const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-  // ... (el resto de la función ahora usa 'email' y 'await')
-  if (isLoginView) {
-    const result = await userService.loginUser(email, password); // AWAIT
-    if (result.success && result.user) {
-      onLogin(result.user);
-    } else {
-      setError(result.message || 'An unknown error occurred.');
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
+    if (!email.trim() || !password.trim()) {
+      setError("El correo y la contraseña no pueden estar vacíos.");
+      return;
     }
-  } else {
-    // ... (lógica de registro)
-  }
-};
 
     if (isLoginView) {
       const result = await userService.loginUser(email, password);
       if (result.success && result.user) {
-        onLogin(result.user);
+        // onAuthStateChanged en App.tsx se encargará de actualizar el estado global.
+        // onLogin(result.user); 
       } else {
-        setError(result.message || 'An unknown error occurred.');
+        setError(result.message);
       }
     } else {
       const result = await userService.registerUser(email, password);
       if (result.success) {
         setSuccessMessage(result.message);
-        setIsLoginView(true); // Switch to login view after successful registration
-        setEmail('');
+        setIsLoginView(true);
         setPassword('');
       } else {
         setError(result.message);
@@ -50,26 +47,17 @@ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     }
   };
 
-// Añade esta nueva función para el botón de Google
-const handleGoogleLogin = async () => {
-  setError(null);
-  const result = await userService.loginWithGoogle();
-  if (result.success && result.user) {
-    onLogin(result.user);
-  } else {
-    setError(result.message);
-  }
-};
-
-
-
-function setEmail(value: string): void {
-  throw new Error('Function not implemented.');
-}
-
-function setPassword(value: string): void {
-  throw new Error('Function not implemented.');
-}
+  const handleGoogleLogin = async () => {
+    setError(null);
+    setSuccessMessage(null);
+    const result = await userService.loginWithGoogle();
+    if (result.success && result.user) {
+      // onAuthStateChanged en App.tsx se encargará de actualizar el estado global.
+      // onLogin(result.user);
+    } else {
+      setError(result.message);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-base-200 via-base-100 to-base-200 dark:from-dark-base-100 dark:via-dark-base-200 dark:to-dark-base-100 p-4">
@@ -126,8 +114,9 @@ function setPassword(value: string): void {
         </div>
 
         <button
-          type="button" // QUITA 'disabled'
-          className="w-full p-3 flex items-center justify-center gap-3 border border-gray-300 dark:border-gray-600 text-base-content dark:text-dark-base-content font-semibold rounded-lg hover:bg-base-200 dark:hover:bg-dark-base-300 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          type="button"
+          onClick={handleGoogleLogin}
+          className="w-full p-3 flex items-center justify-center gap-3 border border-gray-300 dark:border-gray-600 text-base-content dark:text-dark-base-content font-semibold rounded-lg hover:bg-base-200 dark:hover:bg-dark-base-300 transition-colors duration-200"
         >
           <GoogleIcon />
           <span>Continuar con Google</span>
@@ -142,11 +131,4 @@ function setPassword(value: string): void {
       </div>
     </div>
   );
-}
-function setError(arg0: null) {
-  throw new Error('Function not implemented.');
-}
-
-function onLogin(user: User) {
-  throw new Error('Function not implemented.');
 }
