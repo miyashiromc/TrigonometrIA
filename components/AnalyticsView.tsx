@@ -64,12 +64,7 @@ export default function AnalyticsView({ data, onReset }: AnalyticsViewProps): Re
     <div className="p-4 md:p-8 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-4xl font-bold">Tus Estadísticas</h1>
-        <button
-          onClick={() => window.confirm('¿Estás seguro de que quieres reiniciar tus estadísticas? Esta acción no se puede deshacer.') && onReset()}
-          className="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors"
-        >
-          Reiniciar
-        </button>
+        
       </div>
       <p className="text-gray-500 dark:text-gray-400 mb-8">Aquí puedes ver un resumen de tu progreso y actividad en la aplicación.</p>
 

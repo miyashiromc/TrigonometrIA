@@ -8,9 +8,9 @@ import {
   User as FirebaseUser,
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import { auth, db } from '../firebaseConfig'; // Importamos la configuración central
-import type { User, UserData } from '../types'; // Cita: miyashiromc/trigonometria/TrigonometrIA-e028480dc2a01df85beb94ea07e37d3d5e51814e/types.ts
-import { getDefaultAnalyticsData } from './analyticsService'; // Cita: miyashiromc/trigonometria/TrigonometrIA-e028480dc2a01df85beb94ea07e37d3d5e51814e/services/analyticsService.ts
+import { auth, db } from '../firebaseConfig';
+import type { User, UserData } from '../types';
+import { getDefaultAnalyticsData } from './analyticsService';
 
 // --- Función Auxiliar para Crear/Obtener Perfiles en Firestore ---
 const manageUserProfile = async (firebaseUser: FirebaseUser, email?: string): Promise<User> => {
@@ -18,41 +18,70 @@ const manageUserProfile = async (firebaseUser: FirebaseUser, email?: string): Pr
   const userDoc = await getDoc(userDocRef);
 
   if (userDoc.exists()) {
-    // Si el usuario ya tiene un perfil, lo devolvemos
-    return userDoc.data().profile as User;
+    const userProfile = userDoc.data().profile as User;
+    userProfile.id = firebaseUser.uid; // Siempre añadimos el ID al objeto que usará la App.
+    return userProfile;
   } else {
-    // Si es la primera vez que inicia sesión, creamos su perfil
+    // Este es el objeto COMPLETO que usará la App. SÍ incluye el ID.
     const newUserProfile: User = {
-      // El 'id' ahora estará en el documento de Firestore, no en el perfil
+      id: firebaseUser.uid,
       username: firebaseUser.displayName || email?.split('@')[0] || 'Nuevo Usuario',
       email: firebaseUser.email,
-      avatar: 'avatar1' // Avatar por defecto
+      avatar: 'avatar1'
+    };
+
+    // Este es el objeto que guardaremos en Firestore. NO incluye el ID en el sub-objeto 'profile'
+    // para no duplicar datos (ya que el ID del documento es el ID del usuario).
+    // ---> ¡AQUÍ ESTÁ EL ÚNICO CAMBIO NECESARIO! <---
+    // Quitamos la declaración de tipo ": UserData" para que TypeScript no nos exija un 'id' aquí.
+    const userDataForFirestore = {
+      profile: {
+          username: newUserProfile.username,
+          email: newUserProfile.email,
+          avatar: newUserProfile.avatar
+      },
+      analytics: getDefaultAnalyticsData()
     };
     
-    const newUserData: UserData = {
-      profile: newUserProfile,
-      analytics: getDefaultAnalyticsData() // Cita: miyashiromc/trigonometria/TrigonometrIA-e028480dc2a01df85beb94ea07e37d3d5e51814e/services/analyticsService.ts
-    }
+    await setDoc(userDocRef, userDataForFirestore);
     
-    await setDoc(userDocRef, newUserData);
+    // Devolvemos el perfil completo para que la App lo use inmediatamente.
     return newUserProfile;
   }
 };
 
-// Obtiene todos los datos de un usuario
+// Obtiene todos los datos de un usuario desde Firestore.
 export const getUserData = async (uid: string): Promise<UserData | null> => {
     const userDocRef = doc(db, "users", uid);
     const userDoc = await getDoc(userDocRef);
-    return userDoc.exists() ? userDoc.data() as UserData : null;
+    
+    if (userDoc.exists()) {
+        const data = userDoc.data() as UserData;
+        // La corrección más importante: Nos aseguramos de que el perfil que le
+        // llega a la aplicación SIEMPRE tenga el ID.
+        data.profile.id = uid;
+        return data;
+    }
+    
+    return null;
 }
 
-// Guarda los datos de un usuario
+// Guarda los datos de un usuario.
 export const saveUserData = async (uid: string, data: UserData) => {
+    // Hacemos una copia profunda para no mutar el estado original de React.
+    const dataToSave = JSON.parse(JSON.stringify(data));
+    
+    // Antes de guardar, eliminamos el 'id' del sub-objeto 'profile' para
+    // mantener nuestra base de datos limpia y sin datos duplicados.
+    if (dataToSave.profile) {
+      delete dataToSave.profile.id;
+    }
+    
     const userDocRef = doc(db, "users", uid);
-    await setDoc(userDocRef, data, { merge: true }); // Usamos merge para no sobrescribir todo
+    await setDoc(userDocRef, dataToSave, { merge: true });
 };
 
-// --- Funciones de Autenticación Reales ---
+// --- Funciones de Autenticación (sin cambios) ---
 export const registerUser = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);

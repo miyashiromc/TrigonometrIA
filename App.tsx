@@ -17,11 +17,15 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebaseConfig';
 
 
+
+
 export default function App(): React.ReactNode {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
 
   const [authLoading, setAuthLoading] = useState(true);
+
+  
 
   const [activeView, setActiveView] = useState<View>('exercises');
   const [history, setHistory] = useState<ChatMessage[]>([]);
@@ -38,27 +42,37 @@ export default function App(): React.ReactNode {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        // Usuario ha iniciado sesión
         const data = await userService.getUserData(firebaseUser.uid);
         if (data) {
           setCurrentUser(data.profile);
           setUserData(data);
         }
       } else {
+        // Usuario ha cerrado sesión
         setCurrentUser(null);
         setUserData(null);
       }
-      setAuthLoading(false); // Dejamos de cargar
+      setAuthLoading(false); // Terminamos de verificar, quitamos la pantalla de carga
     });
-    return () => unsubscribe(); // Limpiamos al salir
+    
+    // Esto limpia el "oyente" cuando el componente se cierra para evitar problemas
+    return () => unsubscribe(); 
   }, []);
   
 
-  const updateUserData = (newUserData: UserData) => {
-    if (currentUser) {
-      setUserData(newUserData);
-      userService.saveUserData(currentUser.username, newUserData);
-    }
-  };
+  // En App.tsx, dentro de la función updateUserData
+
+const updateUserData = (newUserData: UserData) => {
+  // ----> AÑADE ESTA LÍNEA PARA DEPURAR <----
+  console.log('Inspeccionando el objeto currentUser:', currentUser);
+
+  if (currentUser) {
+    setUserData(newUserData);
+    // Esta es la línea que probablemente causa el problema
+    userService.saveUserData(currentUser.id, newUserData);
+  }
+};
 
   useEffect(() => {
     if (!userData) return;
@@ -248,6 +262,19 @@ export default function App(): React.ReactNode {
     }
      return viewContent;
   };
+  if (authLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  // 4. MODIFICA esta condición. El `handleLogin` puede estar vacío porque
+  //    onAuthStateChanged ya hace el trabajo pesado.
+  if (!currentUser || !userData) {
+    return <LoginView onLogin={() => {}} />;
+  }
 
   return (
     <div className="flex h-screen bg-base-200 dark:bg-dark-base-100 text-base-content dark:text-dark-base-content">

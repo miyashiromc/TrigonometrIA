@@ -56,9 +56,14 @@ export interface AnalyticsData {
 }
 
 // User Profile & Data
+// En types.ts
+
+// User Profile & Data
 export interface User {
+    id: string;          // <-- AÑADE ESTA LÍNEA
     username: string;
-    avatar: string; // e.g., 'avatar1', 'avatar2'
+    email: string | null; // <-- AÑADE ESTA LÍNEA
+    avatar: string;
 }
 
 export interface UserData {
