@@ -9,39 +9,67 @@ interface LoginViewProps {
 
 export default function LoginView({ onLogin }: LoginViewProps) {
   const [isLoginView, setIsLoginView] = useState(true);
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState(''); // Cambia username por email
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError(null);
-    setSuccessMessage(null);
-    if (!username.trim() || !password.trim()) {
-      setError("El nombre de usuario y la contraseña no pueden estar vacíos.");
-      return;
+  // Reemplaza tu función handleSubmit
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  // ... (el resto de la función ahora usa 'email' y 'await')
+  if (isLoginView) {
+    const result = await userService.loginUser(email, password); // AWAIT
+    if (result.success && result.user) {
+      onLogin(result.user);
+    } else {
+      setError(result.message || 'An unknown error occurred.');
     }
+  } else {
+    // ... (lógica de registro)
+  }
+};
 
     if (isLoginView) {
-      const result = userService.loginUser(username, password);
+      const result = await userService.loginUser(email, password);
       if (result.success && result.user) {
         onLogin(result.user);
       } else {
-        setError(result.message);
+        setError(result.message || 'An unknown error occurred.');
       }
     } else {
-      const result = userService.registerUser(username, password);
+      const result = await userService.registerUser(email, password);
       if (result.success) {
         setSuccessMessage(result.message);
         setIsLoginView(true); // Switch to login view after successful registration
-        setUsername('');
+        setEmail('');
         setPassword('');
       } else {
         setError(result.message);
       }
     }
   };
+
+// Añade esta nueva función para el botón de Google
+const handleGoogleLogin = async () => {
+  setError(null);
+  const result = await userService.loginWithGoogle();
+  if (result.success && result.user) {
+    onLogin(result.user);
+  } else {
+    setError(result.message);
+  }
+};
+
+
+
+function setEmail(value: string): void {
+  throw new Error('Function not implemented.');
+}
+
+function setPassword(value: string): void {
+  throw new Error('Function not implemented.');
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-base-200 via-base-100 to-base-200 dark:from-dark-base-100 dark:via-dark-base-200 dark:to-dark-base-100 p-4">
@@ -55,15 +83,15 @@ export default function LoginView({ onLogin }: LoginViewProps) {
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <input
-            id="username"
-            name="username"
-            type="text"
-            autoComplete="username"
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
             required
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-base-100 dark:bg-dark-base-200 text-base-content dark:text-dark-base-content focus:ring-2 focus:ring-brand-primary focus:outline-none"
-            placeholder="Nombre de usuario"
+            placeholder="Correo electrónico"
           />
           <input
             id="password"
@@ -98,8 +126,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
         </div>
 
         <button
-          type="button"
-          disabled
+          type="button" // QUITA 'disabled'
           className="w-full p-3 flex items-center justify-center gap-3 border border-gray-300 dark:border-gray-600 text-base-content dark:text-dark-base-content font-semibold rounded-lg hover:bg-base-200 dark:hover:bg-dark-base-300 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <GoogleIcon />
@@ -115,4 +142,11 @@ export default function LoginView({ onLogin }: LoginViewProps) {
       </div>
     </div>
   );
+}
+function setError(arg0: null) {
+  throw new Error('Function not implemented.');
+}
+
+function onLogin(user: User) {
+  throw new Error('Function not implemented.');
 }
