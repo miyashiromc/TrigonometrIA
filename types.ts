@@ -64,6 +64,10 @@ export interface User {
     username: string;
     email: string | null; // <-- AÑADE ESTA LÍNEA
     avatar: string;
+    age?: number; // Usamos '?' para que sea opcional
+    institution?: string;
+    educationLevel?: 'Primaria' | 'Secundaria' | 'Bachillerato' | 'Universidad' | 'Otro';
+
 }
 
 export interface UserData {

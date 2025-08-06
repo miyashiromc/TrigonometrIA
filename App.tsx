@@ -95,6 +95,32 @@ const updateUserData = (newUserData: UserData) => {
     setCurrentUser(user);
   };
 
+  // En App.tsx, dentro del componente App y junto a las otras funciones 'handle'
+
+const handleProfileUpdate = (updatedProfileData: Partial<User>) => {
+  if (userData && currentUser) {
+    // 1. Creamos una copia actualizada del perfil
+    const newProfile: User = {
+      ...currentUser,
+      ...updatedProfileData,
+    };
+    
+    // 2. Creamos una copia actualizada de todos los datos del usuario
+    const newUserData: UserData = {
+      ...userData,
+      profile: newProfile,
+    };
+
+    // 3. Actualizamos el estado local para que la UI reaccione inmediatamente
+    setCurrentUser(newProfile);
+    setUserData(newUserData);
+
+    // 4. Llamamos a la función que guarda en la base de datos (esta ya la tienes)
+    //    La función saveUserData se encargará de quitar el 'id' antes de guardar.
+    userService.saveUserData(currentUser.id, newUserData);
+  }
+};
+
   const handleLogout = () => {
     userService.logoutUser();
     setCurrentUser(null);
@@ -253,8 +279,12 @@ const updateUserData = (newUserData: UserData) => {
       case 'analytics':
         viewContent = <AnalyticsView data={userData.analytics} onReset={handleResetAnalytics} />;
         break;
-      case 'profile':
-        viewContent = <ProfileView user={userData.profile} onAvatarChange={handleUpdateAvatar} />;
+      case 'profile':viewContent = <ProfileView 
+                  user={userData.profile} 
+                  onAvatarChange={handleUpdateAvatar}
+                  onProfileSave={handleProfileUpdate} // <-- AÑADE ESTA LÍNEA
+                />;
+  break;
         break;
       default:
         viewContent = <ChatView history={history} setHistory={setHistory} onTopicSubmit={handleTopicSubmit} isLoading={isLoading} error={error} setError={setError} />;
