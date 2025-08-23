@@ -67,6 +67,7 @@ export interface User {
     age?: number; // Usamos '?' para que sea opcional
     institution?: string;
     educationLevel?: 'Primaria' | 'Secundaria' | 'Bachillerato' | 'Universidad' | 'Otro';
+    
 
 }
 
