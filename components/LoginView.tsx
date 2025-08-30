@@ -78,7 +78,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-base-100 dark:bg-dark-base-200 text-base-content dark:text-dark-base-content focus:ring-2 focus:ring-brand-primary focus:outline-none"
+            className="w-full p-3 border-gray-300 dark:border-gray-700 rounded-lg bg-base-100 dark:bg-dark-base-200 text-base-content dark:text-dark-base-content focus:ring-2 focus:ring-brand-primary dark:focus:ring-brand-primary-dark focus:outline-none"
             placeholder="Correo electrónico"
           />
           <input
@@ -89,7 +89,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-base-100 dark:bg-dark-base-200 text-base-content dark:text-dark-base-content focus:ring-2 focus:ring-brand-primary focus:outline-none"
+            className="w-full p-3 border-gray-300 dark:border-gray-700 rounded-lg bg-base-100 dark:bg-dark-base-200 text-base-content dark:text-dark-base-content focus:ring-2 focus:ring-brand-primary dark:focus:ring-brand-primary-dark focus:outline-none"
             placeholder="Contraseña"
           />
 
@@ -98,7 +98,7 @@ export default function LoginView({ onLogin }: LoginViewProps) {
 
           <button
             type="submit"
-            className="w-full p-3 bg-brand-primary text-white font-bold text-lg rounded-lg hover:bg-brand-secondary transition-colors duration-200 disabled:bg-gray-400"
+            className="w-full p-3 bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-gray-900 font-bold text-lg rounded-lg hover:bg-brand-secondary dark:hover:bg-brand-secondary-dark transition-colors duration-200 disabled:bg-gray-400"
           >
             {isLoginView ? 'Iniciar Sesión' : 'Registrarse'}
           </button>

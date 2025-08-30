@@ -67,10 +67,10 @@ export default function PracticeView({ topic, onComplete, onBack }: PracticeView
             return "bg-base-100 dark:bg-dark-base-200 hover:bg-base-200 dark:hover:bg-dark-base-300";
         }
         if (index === questions[currentQuestionIndex]?.correctAnswerIndex) {
-            return "bg-green-200 dark:bg-green-800 border-green-500 ring-2 ring-green-500";
+            return "bg-success-light dark:bg-success-dark border-success ring-2 ring-success";
         }
         if (index === selectedOption) {
-            return "bg-red-200 dark:bg-red-800 border-red-500 ring-2 ring-red-500";
+            return "bg-error-light dark:bg-error-dark border-error ring-2 ring-error";
         }
         return "bg-base-100 dark:bg-dark-base-200 opacity-60";
     };
@@ -126,6 +126,11 @@ export default function PracticeView({ topic, onComplete, onBack }: PracticeView
                             </button>
                         </div>
                     </div>
+                )}
+            </div>
+        </div>
+    );
+}       </div>
                 )}
             </div>
         </div>

@@ -93,7 +93,7 @@ export default function ChatView({ history, setHistory, onTopicSubmit, isLoading
             className="w-full p-4 bg-transparent focus:outline-none text-base-content dark:text-dark-base-content"
             disabled={isLoading}
           />
-          <button type="submit" className="bg-brand-primary p-3 rounded-lg text-white disabled:bg-gray-400" disabled={isLoading}>
+          <button type="submit" className="bg-brand-primary dark:bg-brand-primary-dark p-3 rounded-lg text-white dark:text-gray-900 disabled:bg-gray-400" disabled={isLoading}>
             <SendIcon />
           </button>
         </form>
