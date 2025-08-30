@@ -11,11 +11,11 @@ module.exports = {
       colors: {
         'brand-primary': {
           DEFAULT: '#1E40AF', // blue-800
-          dark: '#93C5FD', // blue-300
+          dark: '#2563EB', // blue-600
         },
         'brand-secondary': {
           DEFAULT: '#0D9488', // teal-600
-          dark: '#5EEAD4', // teal-300
+          dark: '#14B8A6', // teal-500
         },
         'base-100': '#FFFFFF',
         'base-200': '#F8F8F8',
@@ -43,7 +43,7 @@ module.exports = {
         info: {
           light: '#DBEAFE', // blue-100
           DEFAULT: '#4338CA', // indigo-700
-          dark: '#A5B4FC', // indigo-300
+          dark: '#6366F1', // indigo-500
         },
       },
     },
