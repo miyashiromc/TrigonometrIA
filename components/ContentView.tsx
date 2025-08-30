@@ -18,6 +18,7 @@ interface ContentViewProps {
 export default function ContentView({ content, topic, onAudioPlay, onQuizComplete }: ContentViewProps): React.ReactNode {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const contentRef = React.useRef<HTMLDivElement>(null);
+    const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
 
     const [allQuizQuestions, setAllQuizQuestions] = useState<QuizQuestion[]>(content.quiz);
     const [quiz, setQuiz] = useState<QuizQuestion[]>(content.quiz.slice(0, 5));
@@ -30,6 +31,16 @@ export default function ContentView({ content, topic, onAudioPlay, onQuizComplet
     const [score, setScore] = useState(0);
 
     useEffect(() => {
+        if ('speechSynthesis' in window) {
+            const loadVoices = () => {
+                setVoices(window.speechSynthesis.getVoices());
+            };
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+            loadVoices(); // Initial load
+        }
+    }, []);
+
+    useEffect(() => {
         setAllQuizQuestions(content.quiz);
         setQuiz(content.quiz.slice(0, 5));
         setQuizBatch(0);
@@ -37,11 +48,19 @@ export default function ContentView({ content, topic, onAudioPlay, onQuizComplet
         setIsSubmitted(false);
         setScore(0);
         setGenerateError(null);
-        window.speechSynthesis.cancel();
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
         setIsSpeaking(false);
     }, [content]);
 
     const handleSpeak = useCallback(() => {
+        if (!('speechSynthesis' in window)) {
+            console.error("Speech Synthesis not supported");
+            // Optionally, show a message to the user
+            return;
+        }
+
         if (isSpeaking) {
             window.speechSynthesis.cancel();
             setIsSpeaking(false);
@@ -52,13 +71,25 @@ export default function ContentView({ content, topic, onAudioPlay, onQuizComplet
             onAudioPlay();
             const textToSpeak = contentRef.current.innerText;
             const utterance = new SpeechSynthesisUtterance(textToSpeak);
-            utterance.lang = 'es-ES';
+
+            const spanishVoice = voices.find(voice => voice.lang.startsWith('es'));
+
+            if (spanishVoice) {
+                utterance.voice = spanishVoice;
+            } else {
+                utterance.lang = 'es-ES'; // Fallback
+            }
+
             utterance.onstart = () => setIsSpeaking(true);
             utterance.onend = () => setIsSpeaking(false);
-            utterance.onerror = () => setIsSpeaking(false);
+            utterance.onerror = (event) => {
+                console.error("SpeechSynthesisUtterance.onerror", event);
+                setIsSpeaking(false);
+            };
+
             window.speechSynthesis.speak(utterance);
         }
-    }, [isSpeaking, onAudioPlay]);
+    }, [isSpeaking, onAudioPlay, voices]);
 
     const handleAnswerSelect = (questionIndex: number, optionIndex: number) => {
         if (isSubmitted) return;
@@ -172,7 +203,7 @@ export default function ContentView({ content, topic, onAudioPlay, onQuizComplet
                                  <div className="flex items-start gap-3 mb-4">
                                      {isSubmitted && (
                                         <div className="flex-shrink-0 mt-0.5">
-                                            {selectedAnswers[qIndex] === q.correctAnswerIndex 
+                                            {selectedAnswers[qIndex] === q.correctAnswerIndex
                                                 ? <div className="text-green-500"><CheckCircleIcon /></div>
                                                 : <div className="text-red-500"><XCircleIcon /></div>
                                             }
@@ -182,7 +213,7 @@ export default function ContentView({ content, topic, onAudioPlay, onQuizComplet
                                  </div>
                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {q.options.map((opt, oIndex) => (
-                                        <button 
+                                        <button
                                             key={oIndex}
                                             onClick={() => handleAnswerSelect(qIndex, oIndex)}
                                             disabled={isSubmitted}
@@ -204,7 +235,7 @@ export default function ContentView({ content, topic, onAudioPlay, onQuizComplet
                             </div>
                         ))}
                     </div>
-                    
+
                     <div className="mt-8 pt-6 border-t border-base-200 dark:border-dark-base-300 flex flex-col items-center">
                         <div className="flex justify-center gap-4">
                             {!isSubmitted ? (
