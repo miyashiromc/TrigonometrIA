@@ -10,40 +10,40 @@ module.exports = {
     extend: {
       colors: {
         'brand-primary': {
-          DEFAULT: '#1D4ED8', // blue-700
-          dark: '#3B82F6', // blue-500
+          DEFAULT: '#1E40AF', // blue-800
+          dark: '#93C5FD', // blue-300
         },
         'brand-secondary': {
-          DEFAULT: '#0284C7', // sky-600
-          dark: '#38BDF8', // sky-400
+          DEFAULT: '#0D9488', // teal-600
+          dark: '#5EEAD4', // teal-300
         },
         'base-100': '#FFFFFF',
-        'base-200': '#F3F4F6',
-        'base-300': '#E5E7EB',
+        'base-200': '#F8F8F8',
+        'base-300': '#F0F0F0',
         'base-content': '#000000',
         'dark-base-100': '#000000',
-        'dark-base-200': '#111827',
-        'dark-base-300': '#1F2937',
+        'dark-base-200': '#1A1A1A',
+        'dark-base-300': '#333333',
         'dark-base-content': '#FFFFFF',
         success: {
           light: '#D1FAE5', // green-100
-          DEFAULT: '#047857', // green-700
-          dark: '#22C55E', // green-500
+          DEFAULT: '#04785E', // green-700
+          dark: '#4ADE80', // green-400
         },
         error: {
           light: '#FEE2E2', // red-100
           DEFAULT: '#B91C1C', // red-700
-          dark: '#EF4444', // red-500
+          dark: '#F87171', // red-400
         },
         warning: {
           light: '#FEF3C7', // amber-100
-          DEFAULT: '#D97706', // amber-600
-          dark: '#FBBF24', // amber-400
+          DEFAULT: '#EA580C', // orange-600
+          dark: '#FDBA74', // orange-300
         },
         info: {
           light: '#DBEAFE', // blue-100
-          DEFAULT: '#0891B2', // cyan-600
-          dark: '#22D3EE', // cyan-400
+          DEFAULT: '#4338CA', // indigo-700
+          dark: '#A5B4FC', // indigo-300
         },
       },
     },
