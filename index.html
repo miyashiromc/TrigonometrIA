@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <link rel="icon" type="image/jpeg" href="/logo2.png" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TrigTutor IA - Tesis UTEQ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'brand-primary': '#4f46e5', // indigo-600
+              'brand-secondary': '#6366f1', // indigo-500
+              'base-100': '#ffffff', // white
+              'base-200': '#f3f4f6', // gray-100
+              'base-300': '#e5e7eb', // gray-200
+              'base-content': '#1f2937', // gray-800
+              'dark-base-100': '#0f172a', // slate-900
+              'dark-base-200': '#1e293b', // slate-800
+              'dark-base-300': '#334155', // slate-700
+              'dark-base-content': '#f1f5f9', // slate-100
+            }
+          }
+        }
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <style>
+        .markdown-content {
+          color: #1f2937; /* base-content */
+          line-height: 1.6;
+        }
+        .dark .markdown-content {
+           color: #f1f5f9; /* dark-base-content */
+        }
+        .markdown-content h1 {
+          font-size: 2.25rem;
+          font-weight: 700;
+          margin-bottom: 1.5rem;
+          padding-bottom: 0.5rem;
+          border-bottom: 1px solid #e5e7eb; /* base-300 */
+        }
+        .dark .markdown-content h1 {
+            border-bottom-color: #334155; /* dark-base-300 */
+        }
+        .markdown-content h2 {
+          font-size: 1.75rem;
+          font-weight: 600;
+          margin-top: 2rem;
+          margin-bottom: 1rem;
+        }
+        .markdown-content h3 {
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin-top: 1.5rem;
+          margin-bottom: 1rem;
+        }
+        .markdown-content p {
+          margin-bottom: 1rem;
+        }
+        .markdown-content ul, .markdown-content ol {
+          margin-bottom: 1rem;
+          padding-left: 2rem;
+        }
+        .markdown-content li {
+          margin-bottom: 0.5rem;
+        }
+        .markdown-content a {
+            color: #4f46e5; /* brand-primary */
+            text-decoration: underline;
+        }
+        .markdown-content a:hover {
+            color: #3730a3;
+        }
+        .dark .markdown-content a {
+            color: #818cf8;
+        }
+        .dark .markdown-content a:hover {
+            color: #a7a7ff;
+        }
+        .markdown-content blockquote {
+            margin: 1.5rem 0;
+            padding-left: 1rem;
+            border-left: 4px solid #d1d5db; /* gray-300 */
+            color: #4b5563; /* gray-600 */
+            font-style: italic;
+        }
+        .dark .markdown-content blockquote {
+            border-left-color: #4b5563; /* gray-600 */
+            color: #9ca3af; /* gray-400 */
+        }
+        .markdown-content pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+        .markdown-content code {
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .markdown-content code:not(pre > code) {
+            background-color: #e5e7eb; /* gray-200 */
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.9em;
+        }
+        .dark .markdown-content code:not(pre > code) {
+            background-color: #334155; /* slate-700 */
+            color: #f1f5f9; /* slate-100 */
+        }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.11.0"
+  }
+}
+</script>
+
+</head>
+  <body class="bg-base-200 dark:bg-dark-base-100 font-sans">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
