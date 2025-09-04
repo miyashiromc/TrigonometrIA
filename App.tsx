@@ -142,7 +142,6 @@ const handleProfileUpdate = (updatedProfileData: Partial<User>) => {
   
 
   const handleTopicSubmit = useCallback(async (topic: string) => {
-    console.log('Submitting topic with user:', currentUser);
     if (currentUser) {
       await userService.saveUserRequest(currentUser.id, topic);
     }
