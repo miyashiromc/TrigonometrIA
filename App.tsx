@@ -191,7 +191,7 @@ const handleProfileUpdate = (updatedProfileData: Partial<User>) => {
     } finally {
         setIsLoading(false);
     }
-  }, []);
+  }, [currentUser]);
   
   const handleNewExercise = useCallback(async (topic: string) => {
     setIsLoading(true);
