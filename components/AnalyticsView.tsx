@@ -15,15 +15,17 @@ interface AnalyticsViewProps {
 }
 
 const formatTime = (seconds: number): string => {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
+  const m = Math.floor((seconds / 60) % 60);
+  const h = Math.floor(seconds / 3600);
 
-  const hStr = String(h).padStart(2, '0');
-  const mStr = String(m).padStart(2, '0');
-  const sStr = String(s).padStart(2, '0');
-
-  return `${hStr}:${mStr}:${sStr}`;
+  if (h > 0) {
+    return `${h}h ${m}m ${s}s`;
+  }
+  if (m > 0) {
+    return `${m}m ${s}s`;
+  }
+  return `${s}s`;
 };
 
 const StatCard = ({ icon, title, value, footer }: { icon: React.ReactNode; title: string; value: string | number; footer?: string }) => (
