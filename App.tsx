@@ -142,6 +142,9 @@ const handleProfileUpdate = (updatedProfileData: Partial<User>) => {
   
 
   const handleTopicSubmit = useCallback(async (topic: string) => {
+    if (currentUser) {
+      await userService.saveUserRequest(currentUser.id, topic);
+    }
     setIsLoading(true);
     setError(null);
     setHistory(prev => [...prev, { role: 'model', text: '', isLoading: true }]);

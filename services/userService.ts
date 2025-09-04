@@ -1,4 +1,4 @@
-// En services/userService.ts
+"""// En services/userService.ts
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -7,10 +7,25 @@ import {
   signOut,
   User as FirebaseUser,
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from '../firebaseConfig';
 import type { User, UserData } from '../types';
 import { getDefaultAnalyticsData } from './analyticsService';
+
+// Guarda una solicitud del usuario en la base de datos.
+export const saveUserRequest = async (uid: string, requestText: string) => {
+  try {
+    const requestsCollectionRef = collection(db, "users", uid, "requests");
+    await addDoc(requestsCollectionRef, {
+      request_text: requestText,
+      timestamp: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error saving user request: ", error);
+    // Opcional: manejar el error, por ejemplo, reintentar o notificar.
+  }
+};
+""
 
 // --- Función Auxiliar para Crear/Obtener Perfiles en Firestore ---
 const manageUserProfile = async (firebaseUser: FirebaseUser, email?: string): Promise<User> => {
