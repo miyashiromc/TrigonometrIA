@@ -28,6 +28,7 @@ export default function ContentView({ content, topic, onAudioPlay, onQuizComplet
     const [isGeneratingNew, setIsGeneratingNew] = useState(false);
     const [generateError, setGenerateError] = useState<string | null>(null);
     const [score, setScore] = useState(0);
+    const [plainTextContent, setPlainTextContent] = useState('');
 
     useEffect(() => {
         setAllQuizQuestions(content.quiz);
@@ -39,6 +40,13 @@ export default function ContentView({ content, topic, onAudioPlay, onQuizComplet
         setGenerateError(null);
         window.speechSynthesis.cancel();
         setIsSpeaking(false);
+
+        // Convertir el HTML a texto plano para la síntesis de voz
+        if (content.html) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = window.marked ? window.marked.parse(content.html) : content.html;
+            setPlainTextContent(tempDiv.textContent || tempDiv.innerText || '');
+        }
     }, [content]);
 
     const handleSpeak = useCallback(() => {
@@ -48,17 +56,17 @@ export default function ContentView({ content, topic, onAudioPlay, onQuizComplet
             return;
         }
 
-        if (contentRef.current) {
+        // MODIFICACIÓN: Usa el estado en lugar del ref
+        if (plainTextContent) {
             onAudioPlay();
-            const textToSpeak = contentRef.current.innerText;
-            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            const utterance = new SpeechSynthesisUtterance(plainTextContent); // <-- LÍNEA NUEVA
             utterance.lang = 'es-ES';
             utterance.onstart = () => setIsSpeaking(true);
             utterance.onend = () => setIsSpeaking(false);
             utterance.onerror = () => setIsSpeaking(false);
             window.speechSynthesis.speak(utterance);
         }
-    }, [isSpeaking, onAudioPlay]);
+    }, [isSpeaking, onAudioPlay, plainTextContent]);
 
     const handleAnswerSelect = (questionIndex: number, optionIndex: number) => {
         if (isSubmitted) return;
