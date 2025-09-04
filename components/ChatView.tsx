@@ -44,7 +44,7 @@ export default function ChatView({ history, setHistory, onTopicSubmit, isLoading
         {history.map((msg, index) => (
           <div key={index} className={`flex items-start gap-4 my-6 ${msg.role === 'user' ? 'justify-end' : ''}`}>
             {msg.role === 'model' && <div className="flex-shrink-0 w-10 h-10 rounded-full bg-brand-secondary text-white flex items-center justify-center"><BotIcon /></div>}
-            <div className={`max-w-xl p-4 rounded-2xl shadow ${msg.role === 'user' ? 'bg-brand-primary text-white' : 'bg-base-100 dark:bg-dark-base-200'}`}>
+            <div className={`max-w-xl p-4 rounded-2xl shadow ${msg.role === 'user' ? 'bg-brand-primary text-black' : 'bg-base-100 dark:bg-dark-base-200'}`}>
               <MarkdownRenderer content={msg.text} />
               {msg.suggestions && msg.suggestions.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-2 pt-3 border-t border-base-200 dark:border-dark-base-300">
