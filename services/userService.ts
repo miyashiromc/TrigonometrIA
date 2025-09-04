@@ -1,4 +1,4 @@
-"""// En services/userService.ts
+// En services/userService.ts
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -25,7 +25,6 @@ export const saveUserRequest = async (uid: string, requestText: string) => {
     // Opcional: manejar el error, por ejemplo, reintentar o notificar.
   }
 };
-""
 
 // --- Función Auxiliar para Crear/Obtener Perfiles en Firestore ---
 const manageUserProfile = async (firebaseUser: FirebaseUser, email?: string): Promise<User> => {
