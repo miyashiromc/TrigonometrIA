@@ -11,7 +11,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: npm ci && npm run build
+      - name: Check secret
+        run: |
+          if [ -z "${{ secrets.VITE_GEMINI_API_KEYS }}" ]; then
+            echo "Secret is not set"
+          else
+            echo "Secret is set"
+          fi
+      - name: Build project
+        run: npm ci && npm run build
+        env:
+          VITE_GEMINI_API_KEYS: ${{ secrets.VITE_GEMINI_API_KEYS }}
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
