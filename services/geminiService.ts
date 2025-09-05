@@ -1,38 +1,75 @@
+// services/geminiService.ts (Versión con Rotación de Claves)
 
 import { GoogleGenAI, Type } from "@google/genai";
 import type { ExerciseContent, GeneratedContent, QuizQuestion } from '../types';
 
 /*
  * =========================================================================
- *  NOTA DE SEGURIDAD
+ * NOTA DE SEGURIDAD
  * =========================================================================
- *  La clave API se maneja a través de `process.env.API_KEY`. En un
- *  entorno de producción, esta clave nunca debe exponerse del lado del
- *  cliente. Para una implementación segura, se debe usar un servidor proxy.
+ * Las claves API se manejan a través de `import.meta.env.VITE_GEMINI_API_KEYS`.
+ * En un entorno de producción, estas claves nunca deben exponerse del lado
+ * del cliente. Para una implementación segura, se debe usar un servidor proxy.
  * =========================================================================
  */
-if (!process.env.API_KEY) {
-    throw new Error("La variable de entorno API_KEY no está configurada.");
+const apiKeys = (import.meta.env.VITE_GEMINI_API_KEYS || '').split(',').map(k => k.trim()).filter(Boolean);
+
+if (apiKeys.length === 0) {
+    throw new Error("La variable de entorno VITE_GEMINI_API_KEYS no está configurada o está vacía.");
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-const textModel = "gemini-2.5-flash";
+// --- Gestor de Claves API ---
+let currentKeyIndex = parseInt(localStorage.getItem('gemini_key_index') || '0', 10) % apiKeys.length;
+
+const getNextKey = (): string => {
+    currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+    localStorage.setItem('gemini_key_index', currentKeyIndex.toString());
+    console.warn(`Cambiando a la clave API índice: ${currentKeyIndex}`);
+    return apiKeys[currentKeyIndex];
+};
+
+let ai = new GoogleGenAI({ apiKey: apiKeys[currentKeyIndex] });
+console.log(`Inicializado con la clave API índice: ${currentKeyIndex}`);
+// --- Fin del Gestor de Claves ---
 
 
-// --- Caching Utilities ---
+// --- Función Envoltorio para Llamadas a la API con Reintentos ---
+async function generateContentWithFallback(
+    params: { model: string; contents: any; generationConfig?: any; },
+    retries: number = apiKeys.length
+): Promise<any> {
+    if (retries <= 0) {
+        throw new Error("Todas las claves API han fallado o alcanzado su límite. Por favor, inténtalo de nuevo más tarde.");
+    }
+    try {
+        const result = await ai.models.generateContent({ model: params.model, contents: params.contents, config: params.generationConfig });
+        return result;
+    } catch (error: any) {
+        // Verifica si el error es por límite de cuota
+        const errorMessage = error.toString().toLowerCase();
+        if (errorMessage.includes('429') || errorMessage.includes('resource_exhausted') || errorMessage.includes('quota')) {
+            console.warn(`La clave API ${currentKeyIndex} ha alcanzado su límite. Reintentando con la siguiente.`);
+            const newKey = getNextKey();
+            ai = new GoogleGenAI({ apiKey: newKey }); // Re-inicializa el cliente con la nueva clave
+            return generateContentWithFallback(params, retries - 1);
+        } else {
+            // Es un error diferente, lo lanzamos para que sea manejado
+            console.error("Error no relacionado con la cuota:", error);
+            throw error;
+        }
+    }
+}
+// --- Fin de la Función Envoltorio ---
+
+
+// --- Caching Utilities (sin cambios) ---
 const CACHE_PREFIX = "gemini-cache:";
 const CACHE_EXPIRATION_MS = 1000 * 60 * 60; // 1 hour
-
-interface CacheEntry<T> {
-    timestamp: number;
-    data: T;
-}
-
+interface CacheEntry<T> { timestamp: number; data: T; }
 function getFromCache<T>(key: string): T | null {
     try {
         const item = localStorage.getItem(key);
         if (!item) return null;
-
         const entry: CacheEntry<T> = JSON.parse(item);
         if (Date.now() - entry.timestamp > CACHE_EXPIRATION_MS) {
             localStorage.removeItem(key);
@@ -44,46 +81,31 @@ function getFromCache<T>(key: string): T | null {
         return null;
     }
 }
-
-function setInCache<T>(key: string, data: T): void {
-    const entry: CacheEntry<T> = {
-        timestamp: Date.now(),
-        data: data,
-    };
-    try {
-        localStorage.setItem(key, JSON.stringify(entry));
-    } catch (e) {
-        console.error("Failed to write to cache:", e);
-    }
+function setInCache<T>(key: string, data: T): void { 
+    const entry: CacheEntry<T> = { timestamp: Date.now(), data: data };
+    try { localStorage.setItem(key, JSON.stringify(entry)); }
+    catch (e) { console.error("Failed to write to cache:", e); }
 }
 // --- End Caching Utilities ---
 
 
-export interface TopicValidationResult {
-  is_relevant: boolean;
-  suggested_topics: string[];
-}
+export interface TopicValidationResult { is_relevant: boolean; suggested_topics: string[]; }
+
+// --- FUNCIONES DEL SERVICIO (MODIFICADAS PARA USAR EL ENVOLTORIO) ---
 
 export async function validarTema(topic: string): Promise<TopicValidationResult> {
     const cacheKey = `${CACHE_PREFIX}validarTema:${topic.toLowerCase().trim()}`;
     const cachedResult = getFromCache<TopicValidationResult>(cacheKey);
-    if (cachedResult) {
-        return cachedResult;
-    }
+    if (cachedResult) return cachedResult;
 
-    const validationPrompt = `Eres un asistente de IA para una aplicación de tutoría de trigonometría. Tu tarea es validar si el tema de un usuario está relacionado con la trigonometría o las matemáticas en general. Sé flexible y permite temas matemáticos amplios (cálculo, álgebra, geometría), pero rechaza temas que no estén relacionados (por ejemplo, historia, biología, literatura).
-
-    Analiza el siguiente tema: "${topic}"
-
-    Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura. No incluyas ninguna otra palabra o formato como "json" o \`\`\`.
+    const validationPrompt = `Eres un asistente de IA para una aplicación de tutoría de trigonometría. Tu tarea es validar si el tema de un usuario está relacionado con la trigonometría o las matemáticas en general. Sé flexible y permite temas matemáticos amplios (cálculo, álgebra, geometría), pero rechaza temas que no estén relacionados (por ejemplo, historia, biología, literatura).\n\n    Analiza el siguiente tema: \"${topic}\"\n\n    Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura. No incluyas ninguna otra palabra o formato como \"json\" o \`\`\`.
     {
-      "is_relevant": boolean,
-      "suggested_topics": ["tema1", "tema2", "tema3"]
+      \"is_relevant\": boolean,
+      \"suggested_topics\": [\"tema1\", \"tema2\", \"tema3\"]
     }
 
-    - "is_relevant" debe ser 'true' si el tema es de matemáticas o trigonometría, y 'false' si no lo es.
-    - "suggested_topics" debe ser un array con tres sugerencias de temas de trigonometría si "is_relevant" es 'false'. Si es 'true', debe ser un array vacío.`;
-    
+    - \"is_relevant\" debe ser 'true' si el tema es de matemáticas o trigonometría, y 'false' si no lo es.
+    - \"suggested_topics\" debe ser un array con tres sugerencias de trigonometría si \"is_relevant\" es 'false'. Si es 'true', debe ser un array vacío.`;
     const validationSchema = {
       type: Type.OBJECT,
       properties: {
@@ -102,34 +124,28 @@ export async function validarTema(topic: string): Promise<TopicValidationResult>
       required: ["is_relevant", "suggested_topics"]
     };
 
-    const response = await ai.models.generateContent({
-        model: textModel,
+    const response = await generateContentWithFallback({
+        model: "gemini-1.5-flash",
         contents: validationPrompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: validationSchema
-        }
+        generationConfig: { responseMimeType: "application/json", responseSchema: validationSchema }
     });
 
     try {
         const result = JSON.parse(response.text);
         setInCache(cacheKey, result);
-        return result as TopicValidationResult;
+        return result;
     } catch (e) {
         console.error("Failed to parse validation response:", response.text);
         return { is_relevant: false, suggested_topics: ["Ley de Senos", "Círculo Unitario", "Teorema de Pitágoras"] };
     }
 }
 
-
 export async function generarContenidoEducativo(topic: string): Promise<GeneratedContent> {
     const cacheKey = `${CACHE_PREFIX}generarContenido:${topic.toLowerCase().trim()}`;
     const cachedResult = getFromCache<GeneratedContent>(cacheKey);
-    if (cachedResult) {
-        return cachedResult;
-    }
+    if (cachedResult) return cachedResult;
 
-    const prompt = `Genera una página educativa completa sobre "${topic}" en español, dirigida a estudiantes de secundaria.
+    const prompt = `Genera una página educativa completa sobre \"${topic}\" en español, dirigida a estudiantes de secundaria.
     Estructura del contenido:
     1. **Título Principal**: Usa un H1 (#) con el nombre del tema.
     2. **Introducción**: Usa un H2 (##). Escribe un párrafo (100-150 palabras) que explique qué es el tema, su importancia en trigonometría y una aplicación práctica para captar interés.
@@ -140,19 +156,18 @@ export async function generarContenidoEducativo(topic: string): Promise<Generate
     
     Además del contenido, crea un quiz de 10 preguntas clave de opción múltiple basadas en el contenido que generaste. Cada pregunta debe tener 4 opciones. Para cada pregunta, proporciona una explicación detallada que aclare por qué la respuesta correcta es la correcta.
 
-    Tu respuesta DEBE ser un objeto JSON válido con la siguiente estructura. No incluyas ninguna otra palabra o formato como "json" o \`\`\`.
+    Tu respuesta DEBE ser un objeto JSON válido con la siguiente estructura. No incluyas ninguna otra palabra o formato como \"json\" o \`\`\`.
     {
-      "html": "...",
-      "quiz": [
+      \"html\": \"...\",
+      \"quiz\": [
         {
-          "question": "...",
-          "options": [{ "text": "..." }, ...],
-          "correctAnswerIndex": 0,
-          "explanation": "..."
+          \"question\": \"...\",
+          \"options\": [{ \"text\": \"...\" }, ...],
+          \"correctAnswerIndex\": 0,
+          \"explanation\": \"...\"
         }
       ]
     }`;
-
     const contentSchema = {
         type: Type.OBJECT,
         properties: {
@@ -182,19 +197,16 @@ export async function generarContenidoEducativo(topic: string): Promise<Generate
         required: ["html", "quiz"]
     };
 
-    const response = await ai.models.generateContent({
-        model: textModel,
+    const response = await generateContentWithFallback({
+        model: "gemini-1.5-flash",
         contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: contentSchema
-        }
+        generationConfig: { responseMimeType: "application/json", responseSchema: contentSchema }
     });
     
     try {
         const result = JSON.parse(response.text);
         setInCache(cacheKey, result);
-        return result as GeneratedContent;
+        return result;
     } catch (e) {
         console.error("Failed to parse content response:", response.text, e);
         throw new Error("No se pudo analizar la respuesta del contenido generado.");
@@ -202,19 +214,16 @@ export async function generarContenidoEducativo(topic: string): Promise<Generate
 }
 
 export async function generarNuevasPreguntas(topic: string): Promise<QuizQuestion[]> {
-     const prompt = `Crea un quiz de 5 preguntas clave de opción múltiple sobre "${topic}" en español, para estudiantes de secundaria. Cada pregunta debe tener 4 opciones. Para cada pregunta, proporciona una explicación detallada que aclare por qué la respuesta correcta es la correcta.
-
-    Tu respuesta DEBE ser un array de objetos JSON válido con la siguiente estructura. No incluyas ninguna otra palabra o formato como "json" o \`\`\`.
+     const prompt = `Crea un quiz de 5 preguntas clave de opción múltiple sobre \"${topic}\" en español, para estudiantes de secundaria. Cada pregunta debe tener 4 opciones. Para cada pregunta, proporciona una explicación detallada que aclare por qué la respuesta correcta es la correcta.\n\n    Tu respuesta DEBE ser un array de objetos JSON válido con la siguiente estructura. No incluyas ninguna otra palabra o formato como \"json\" o \`\`\`.
     [
       {
-        "question": "Pregunta 1...",
-        "options": [{ "text": "Opción A" }, ...],
-        "correctAnswerIndex": 0,
-        "explanation": "Explicación de la respuesta correcta..."
+        \"question\": \"Pregunta 1...\",
+        \"options\": [{ \"text\": \"Opción A\" }, ...],
+        \"correctAnswerIndex\": 0,
+        \"explanation\": \"Explicación de la respuesta correcta...\"
       }
     ]`;
-
-    const quizSchema = {
+     const quizSchema = {
         type: Type.ARRAY,
         items: {
             type: Type.OBJECT,
@@ -235,21 +244,16 @@ export async function generarNuevasPreguntas(topic: string): Promise<QuizQuestio
         }
     };
     
-    const response = await ai.models.generateContent({
-        model: textModel,
+    const response = await generateContentWithFallback({
+        model: "gemini-1.5-flash",
         contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: quizSchema
-        }
+        generationConfig: { responseMimeType: "application/json", responseSchema: quizSchema }
     });
     
     try {
         let quiz = JSON.parse(response.text);
-        if (quiz && quiz.length > 5) {
-            quiz = quiz.slice(0, 5);
-        }
-        return quiz as QuizQuestion[];
+        if (quiz && quiz.length > 5) quiz = quiz.slice(0, 5);
+        return quiz;
     } catch (e) {
         console.error("Failed to parse new questions response:", response.text, e);
         throw new Error("No se pudo analizar la respuesta de las nuevas preguntas.");
@@ -263,25 +267,25 @@ export async function generarEjercicioTrigonometria(topic: string, history: stri
 IMPORTANTE: Ya se han mostrado los siguientes ejercicios. Para asegurar la variedad, DEBES crear un problema completamente NUEVO que sea distinto a los del historial. No repitas los mismos problemas ni crees variaciones simples cambiando solo los números. Sé creativo.
 
 Historial de ejercicios anteriores (NO REPETIR):
-${history.map((q) => `- "${q}"`).join('\n')}
+${history.map((q) => `- \"${q}\"`).join('\n')}
 `
         : '';
 
-     const exercisePrompt = `Crea un ejercicio de opción múltiple **NUEVO y DIFERENTE** sobre "${topic}" en español.${historyPrompt}
+     const exercisePrompt = `Crea un ejercicio de opción múltiple **NUEVO y DIFERENTE** sobre \"${topic}\" en español.${historyPrompt}
     
     La pregunta debe ser relevante y de nivel de secundaria. Proporciona 4 opciones de respuesta (una correcta y tres incorrectas plausibles). Indica el índice de la respuesta correcta y una explicación clara y concisa de la solución.
     
-    Tu respuesta DEBE ser un objeto JSON válido con la siguiente estructura. No incluyas ninguna otra palabra o formato como "json" o \`\`\`.
+    Tu respuesta DEBE ser un objeto JSON válido con la siguiente estructura. No incluyas ninguna otra palabra o formato como \"json\" o \`\`\`.
     {
-      "question": "El texto de la pregunta...",
-      "options": [
-        { "text": "Opción A" },
-        { "text": "Opción B" },
-        { "text": "Opción C" },
-        { "text": "Opción D" }
+      \"question\": \"El texto de la pregunta...\",
+      \"options\": [
+        { \"text\": \"Opción A\" },
+        { \"text\": \"Opción B\" },
+        { \"text\": \"Opción C\" },
+        { \"text\": \"Opción D\" }
       ],
-      "correctAnswerIndex": 2, // Índice de la respuesta correcta (0-3)
-      "explanation": "Una explicación detallada de por qué esa es la respuesta correcta."
+      \"correctAnswerIndex\": 2, // Índice de la respuesta correcta (0-3)
+      \"explanation\": \"Una explicación detallada de por qué esa es la respuesta correcta.\"
     }`;
 
     const exerciseSchema = {
@@ -302,20 +306,19 @@ ${history.map((q) => `- "${q}"`).join('\n')}
         required: ["question", "options", "correctAnswerIndex", "explanation"]
     };
 
-    const exerciseResponse = await ai.models.generateContent({
-        model: textModel,
+    const response = await generateContentWithFallback({
+        model: "gemini-1.5-flash",
         contents: exercisePrompt,
-        config: {
+        generationConfig: {
             responseMimeType: "application/json",
             responseSchema: exerciseSchema
         }
     });
 
     try {
-        const exerciseData = JSON.parse(exerciseResponse.text);
-        return exerciseData as ExerciseContent;
+        return JSON.parse(response.text);
     } catch (e) {
-        console.error("Failed to parse exercise response:", exerciseResponse.text, e);
+        console.error("Failed to parse exercise response:", response.text, e);
         throw new Error("No se pudo analizar la respuesta del ejercicio generado.");
     }
 }
@@ -326,9 +329,7 @@ export async function getExerciseClarification(
 ): Promise<string> {
     const cacheKey = `${CACHE_PREFIX}clarification:${exercise.question}:${userQuestion.toLowerCase().trim()}`;
     const cachedResult = getFromCache<string>(cacheKey);
-    if (cachedResult) {
-        return cachedResult;
-    }
+    if (cachedResult) return cachedResult;
 
     const prompt = `
         Eres un tutor de trigonometría amable y servicial. Un estudiante acaba de intentar resolver el siguiente ejercicio y tiene una pregunta. Tu tarea es responder a su pregunta de manera clara y concisa, basándote únicamente en el contexto del ejercicio proporcionado.
@@ -340,7 +341,7 @@ export async function getExerciseClarification(
         - **Explicación de la Solución:** ${exercise.explanation}
 
         **Pregunta del Estudiante:**
-        "${userQuestion}"
+        \"${userQuestion}\"
 
         **Instrucciones:**
         1.  Responde directamente a la pregunta del estudiante.
@@ -350,8 +351,8 @@ export async function getExerciseClarification(
         5.  Tu respuesta debe ser solo texto, utilizando Markdown simple para formato si es necesario (negritas, listas). No uses JSON.
     `;
     
-    const response = await ai.models.generateContent({
-        model: textModel,
+    const response = await generateContentWithFallback({
+        model: "gemini-1.5-flash",
         contents: prompt,
     });
 
@@ -360,19 +361,14 @@ export async function getExerciseClarification(
 }
 
 export async function generarSesionDePractica(topic: string): Promise<ExerciseContent[]> {
-    const prompt = `Crea una sesión de práctica de 5 ejercicios de opción múltiple sobre "${topic}" en español para estudiantes de secundaria.
-
-    INSTRUCCIONES IMPORTANTES:
-    1.  **VARIEDAD**: Cada uno de los 5 ejercicios debe ser único y diferente de los demás. Cubre diferentes aspectos del tema, usa diferentes números y formula las preguntas de maneras distintas. No repitas problemas.
-    2.  **ESTRUCTURA**: Cada ejercicio debe tener una pregunta clara, 4 opciones de respuesta (una correcta y tres incorrectas plausibles), el índice de la respuesta correcta, y una explicación detallada de la solución.
-    
-    Tu respuesta DEBE ser un array de 5 objetos JSON, con la siguiente estructura. No incluyas ninguna otra palabra o formato como "json" o \`\`\`.
+    const prompt = `Crea una sesión de práctica de 5 ejercicios de opción múltiple sobre \"${topic}\" en español para estudiantes de secundaria.\n\n    INSTRUCCIONES IMPORTANTES:\n    1.  **VARIEDAD**: Cada uno de los 5 ejercicios debe ser único y diferente de los demás. Cubre diferentes aspectos del tema, usa diferentes números y formula las preguntas de maneras distintas. No repitas problemas.\n    2.  **ESTRUCTURA**: Cada ejercicio debe tener una pregunta clara, 4 opciones de respuesta (una correcta y tres incorrectas plausibles), el índice de la respuesta correcta, y una explicación detallada de la solución.\n    
+    Tu respuesta DEBE ser un array de 5 objetos JSON, con la siguiente estructura. No incluyas ninguna otra palabra o formato como \"json\" o \`\`\`.
     [
       {
-        "question": "Texto de la pregunta 1...",
-        "options": [ { "text": "Opción A" }, ... ],
-        "correctAnswerIndex": 1,
-        "explanation": "Explicación detallada de la pregunta 1."
+        \"question\": \"Texto de la pregunta 1...\",
+        \"options\": [ { \"text\": \"Opción A\" }, ... ],
+        \"correctAnswerIndex\": 1,
+        \"explanation\": \"Explicación detallada de la pregunta 1.\"
       },
       ...
     ]`;
@@ -398,10 +394,10 @@ export async function generarSesionDePractica(topic: string): Promise<ExerciseCo
         }
     };
 
-    const response = await ai.models.generateContent({
-        model: textModel,
+    const response = await generateContentWithFallback({
+        model: "gemini-1.5-flash",
         contents: prompt,
-        config: {
+        generationConfig: {
             responseMimeType: "application/json",
             responseSchema: practiceSessionSchema
         }
